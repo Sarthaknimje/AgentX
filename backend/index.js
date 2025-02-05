@@ -45,6 +45,34 @@ app.get('/api/agents/:username', async (req, res) => {
   }
 });
 
+// Add new contract address endpoint
+app.get('/api/agents/contractAddress/:contractAddress', async (req, res) => {
+  try {
+    const { contractAddress } = req.params;
+    const { interval = '_7Days' } = req.query;
+    
+    console.log(`Fetching data for contract address: ${contractAddress}`);
+    
+    const response = await axios.get(
+      `https://api.cookie.fun/v2/agents/contractAddress/${contractAddress}?interval=${interval}`,
+      {
+        headers: {
+          'x-api-key': process.env.COOKIE_API_KEY
+        }
+      }
+    );
+    
+    console.log('API response received');
+    res.json(response.data);
+  } catch (error) {
+    console.error('API Error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      success: false,
+      error: error.response?.data?.error || 'Internal server error'
+    });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server is running on port: ${port}`);
 });

@@ -23,7 +23,9 @@ import {
   TableRow,
   Checkbox,
   FormGroup,
-  FormControlLabel
+  FormControlLabel,
+  Radio,
+  RadioGroup
 } from '@mui/material';
 import { Search as SearchIcon, Mic as MicIcon, Share as ShareIcon, Download as DownloadIcon } from '@mui/icons-material';
 import axios from 'axios';
@@ -49,6 +51,9 @@ function App() {
   const [compareMode, setCompareMode] = useState(false);
   const [compareData, setCompareData] = useState(null);
   const [priceAlert, setPriceAlert] = useState(null);
+  const [showTrends, setShowTrends] = useState(false);
+  const [searchMode, setSearchMode] = useState('username');
+  const [contractAddress, setContractAddress] = useState('');
 
   // Initialize speech recognition
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -61,11 +66,18 @@ function App() {
     // Get search parameter from URL
     const urlParams = new URLSearchParams(window.location.search);
     const searchParam = urlParams.get('search');
+    const contractSearch = urlParams.get('contractSearch');
     
-    // If search parameter exists, trigger search
-    if (searchParam) {
-        setSearchQuery(searchParam);
-        fetchAgentData(searchParam);
+    // If contract search parameter exists, switch to contract mode and search
+    if (contractSearch) {
+      setSearchMode('contract');
+      setContractAddress(contractSearch);
+      fetchAgentData(contractSearch, 'contract');
+    }
+    // Otherwise if username search parameter exists, trigger search
+    else if (searchParam) {
+      setSearchQuery(searchParam);
+      fetchAgentData(searchParam);
     }
     
     // Rest of your useEffect code for speech recognition
@@ -91,28 +103,82 @@ function App() {
   }, []);
 
   const processCommand = async (command) => {
-    if (command.toLowerCase().includes('get agent info for')) {
+    const cmd = command.toLowerCase();
+    
+    if (cmd.includes('get agent info for')) {
       const username = command.split('get agent info for @')[1]?.trim();
       if (username) {
-        await fetchAgentData(username);
+        setSearchMode('username');
+        await fetchAgentData(username, 'username');
+      }
+    }
+    
+    else if (cmd.includes('get agent by contract')) {
+      const contractAddress = cmd.split('get agent by contract')[1]?.trim();
+      if (contractAddress) {
+        setSearchMode('contract');
+        await fetchAgentData(contractAddress, 'contract');
+      }
+    }
+    
+    else if (cmd.includes('compare with')) {
+      const username = cmd.split('compare with @')[1]?.trim();
+      if (username) {
+        setCompareMode(true);
+        speakResponse(`Comparing with ${username}`);
+        await handleCompare(username);
+      }
+    }
+    
+    else if (cmd.includes('show trends')) {
+      if (agentData) {
+        speakResponse("Showing market trends");
+        setShowTrends(true);
+      } else {
+        speakResponse("Please search for an agent first");
+      }
+    }
+    
+    else if (cmd.includes('set price alert')) {
+      const priceMatch = cmd.match(/alert (?:for|at) (\d+(?:\.\d+)?)/);
+      if (priceMatch && priceMatch[1]) {
+        const price = parseFloat(priceMatch[1]);
+        setPriceAlertHandler(price);
+        speakResponse(`Setting price alert for $${price}`);
+      }
+    }
+    
+    else if (cmd.includes('export data')) {
+      if (agentData) {
+        exportData();
+        speakResponse("Exporting agent data to CSV");
+      } else {
+        speakResponse("Please search for an agent first");
       }
     }
   };
 
-  const fetchAgentData = async (query) => {
+  const fetchAgentData = async (query, mode = searchMode) => {
     setLoading(true);
     setError(null);
     try {
-      // Remove @ symbol if present
-      const username = query.replace('@', '');
+      let endpoint;
+      if (mode === 'username') {
+        const cleanUsername = query.replace('@', '');
+        endpoint = `${API_URL}/agents/${cleanUsername}?interval=${interval}`;
+      } else {
+        // Ensure contract address is properly formatted
+        const cleanContract = query.trim();
+        endpoint = `${API_URL}/agents/contractAddress/${cleanContract}?interval=${interval}`;
+      }
       
-      const response = await axios.get(`${API_URL}/agents/${username}?interval=${interval}`);
+      const response = await axios.get(endpoint);
       
       if (response.data.ok) {
         setAgentData(response.data.ok);
-        speakResponse(`Found data for ${username}. Current mindshare is ${response.data.ok.mindshare.toFixed(2)}`);
+        speakResponse(`Found data for ${response.data.ok.agentName}. Current mindshare is ${response.data.ok.mindshare.toFixed(2)}`);
       } else {
-        setError('No data found for this agent');
+        setError('No data found');
       }
     } catch (err) {
       setError(err.response?.data?.error?.errorMessage || 'Failed to fetch agent data');
@@ -142,6 +208,13 @@ function App() {
     e.preventDefault();
     if (searchQuery) {
       fetchAgentData(searchQuery);
+    }
+  };
+
+  const handleContractSearch = (e) => {
+    e.preventDefault();
+    if (contractAddress) {
+      fetchAgentData(contractAddress, 'contract');
     }
   };
 
@@ -245,7 +318,7 @@ function App() {
 
   return (
     <Router>
-      <Container maxWidth="xl" sx={{ py: 3 }}>
+      <Container maxWidth="xl" sx={{ py: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
         <Routes>
           <Route path="/" element={
             <Stack spacing={3}>
@@ -253,47 +326,94 @@ function App() {
                 CookieAI Assistant
               </Typography>
 
-              {/* Search Form */}
-              <Paper component="form" onSubmit={handleSearch} sx={{ p: 2 }}>
-                <Stack spacing={2}>
-                  <TextField
-                    fullWidth
-                    variant="outlined"
-                    placeholder="Enter Twitter username (e.g. cookiedotfun)"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">@</InputAdornment>
-                      ),
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton type="submit" edge="end">
-                            <SearchIcon />
-                          </IconButton>
-                          <IconButton 
-                            edge="end" 
-                            onClick={toggleListening}
-                            color={isListening ? 'error' : 'default'}
-                          >
-                            <MicIcon />
-                          </IconButton>
-                        </InputAdornment>
-                      )
-                    }}
+              {/* Search Mode Selection */}
+              <Paper sx={{ p: 2 }}>
+                <RadioGroup
+                  row
+                  value={searchMode}
+                  onChange={(e) => setSearchMode(e.target.value)}
+                >
+                  <FormControlLabel 
+                    value="username" 
+                    control={<Radio />} 
+                    label="Search by Username" 
                   />
-                  <FormControl fullWidth>
-                    <InputLabel>Time Interval</InputLabel>
-                    <Select
-                      value={interval}
-                      onChange={(e) => setInterval(e.target.value)}
-                      label="Time Interval"
-                    >
-                      <MenuItem value="_3Days">3 Days</MenuItem>
-                      <MenuItem value="_7Days">7 Days</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Stack>
+                  <FormControlLabel
+                    value="contract"
+                    control={<Radio id="contract-search-radio" />}
+                    label="Search by Contract"
+                  />
+                </RadioGroup>
+              </Paper>
+
+              {/* Username Search Form */}
+              {searchMode === 'username' && (
+                <Paper component="form" onSubmit={handleSearch} sx={{ p: 2 }}>
+                  <Stack spacing={2}>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      placeholder="Enter Twitter username (e.g. cookiedotfun)"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">@</InputAdornment>
+                        ),
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton type="submit">
+                              <SearchIcon />
+                            </IconButton>
+                          </InputAdornment>
+                        )
+                      }}
+                    />
+                  </Stack>
+                </Paper>
+              )}
+
+              {/* Contract Address Search Form */}
+              {searchMode === 'contract' && (
+                <Paper component="form" onSubmit={handleContractSearch} sx={{ p: 2 }}>
+                  <Stack spacing={2}>
+                    <TextField
+                      id="contract-search-input"
+                      fullWidth
+                      variant="outlined"
+                      placeholder="Enter contract address (e.g. 0xc0041ef357...)"
+                      value={contractAddress}
+                      onChange={(e) => setContractAddress(e.target.value)}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton type="submit">
+                              <SearchIcon />
+                            </IconButton>
+                          </InputAdornment>
+                        )
+                      }}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      Supports EVM chains and Solana blockchain contracts
+                    </Typography>
+                  </Stack>
+                </Paper>
+              )}
+
+              {/* Time Interval Selection */}
+              <Paper sx={{ p: 2 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Time Interval</InputLabel>
+                  <Select
+                    value={interval}
+                    onChange={(e) => setInterval(e.target.value)}
+                    label="Time Interval"
+                  >
+                    <MenuItem value="_3Days">3 Days</MenuItem>
+                    <MenuItem value="_7Days">7 Days</MenuItem>
+                  </Select>
+                </FormControl>
               </Paper>
 
               <Button
@@ -317,6 +437,7 @@ function App() {
               )}
 
               <Button
+                id="share-button"
                 variant="contained"
                 startIcon={<ShareIcon />}
                 onClick={handleShare}
@@ -326,6 +447,7 @@ function App() {
               </Button>
 
               <Button
+                id="export-button"
                 variant="outlined"
                 startIcon={<DownloadIcon />}
                 onClick={exportData}
@@ -334,14 +456,19 @@ function App() {
                 Export Data
               </Button>
 
+              <Box id="trends-section">
+                {showTrends && (
+                  <MultiMetricChart data={agentData.historicalData} />
+                )}
+              </Box>
+
               <Box>
-                <Typography variant="subtitle2">Set Price Alert</Typography>
                 <TextField
+                  id="price-alert-input"
                   type="number"
-                  label="Alert Price"
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                  }}
+                  label="Set Price Alert"
+                  variant="outlined"
+                  size="small"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       setPriceAlertHandler(e.target.value);
