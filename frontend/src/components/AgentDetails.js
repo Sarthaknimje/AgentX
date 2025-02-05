@@ -22,31 +22,57 @@ import {
   Twitter,
   People,
   Assessment,
-  ContentCopy
+  ContentCopy,
+  Mic,
+  MicOff
 } from '@mui/icons-material';
+
+const globalStyles = {
+  '@keyframes fadeIn': {
+    '0%': { opacity: 0, transform: 'translateY(20px)' },
+    '100%': { opacity: 1, transform: 'translateY(0)' }
+  },
+  '@keyframes pulseGlow': {
+    '0%': { boxShadow: '0 0 5px rgba(137,207,240,0.3)' },
+    '50%': { boxShadow: '0 0 20px rgba(137,207,240,0.5)' },
+    '100%': { boxShadow: '0 0 5px rgba(137,207,240,0.3)' }
+  }
+};
 
 const StatCard = ({ title, value, delta, prefix = '' }) => (
   <Paper 
-    elevation={2}
+    elevation={3}
     sx={{ 
-      p: 2,
+      p: 2.5,
       height: '100%',
-      minHeight: 100,
+      minHeight: 120,
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'space-between',
+      background: 'linear-gradient(135deg, #001B3D 0%, #0A4D94 100%)',
+      color: '#fff',
+      borderRadius: 2,
       transition: 'all 0.3s ease',
       '&:hover': {
-        transform: 'translateY(-2px)',
-        boxShadow: 3
+        transform: 'translateY(-4px)',
+        background: 'linear-gradient(135deg, #002152 0%, #0A5BAE 100%)',
+        boxShadow: '0 8px 25px rgba(10,77,148,0.3)',
       }
     }}
   >
-    <Typography variant="body2" color="text.secondary">
+    <Typography variant="body1" sx={{ 
+      color: 'rgba(255,255,255,0.85)',
+      fontWeight: 500,
+      fontSize: '0.95rem'
+    }}>
       {title}
     </Typography>
     <Box>
-      <Typography variant="h5" sx={{ mt: 1, fontWeight: 500 }}>
+      <Typography variant="h5" sx={{ 
+        fontWeight: 600,
+        color: '#fff',
+        fontSize: '1.5rem'
+      }}>
         {prefix}{typeof value === 'number' ? value.toLocaleString() : value}
       </Typography>
       {delta !== undefined && (
@@ -55,7 +81,14 @@ const StatCard = ({ title, value, delta, prefix = '' }) => (
           icon={delta > 0 ? <TrendingUp sx={{ fontSize: 16 }}/> : <TrendingDown sx={{ fontSize: 16 }}/>}
           label={`${delta > 0 ? '+' : ''}${delta.toFixed(2)}%`}
           color={delta > 0 ? 'success' : 'error'}
-          sx={{ mt: 1, height: 24 }}
+          sx={{ 
+            mt: 1,
+            height: 22,
+            '& .MuiChip-label': {
+              fontSize: '0.75rem',
+              fontWeight: 600
+            }
+          }}
         />
       )}
     </Box>
@@ -63,23 +96,44 @@ const StatCard = ({ title, value, delta, prefix = '' }) => (
 );
 
 const AgentDetails = ({ agent }) => (
-  <Box sx={{ width: '100%' }}>
+  <Box sx={{ 
+    width: '100%',
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #000C24 0%, #001433 100%)',
+    p: 3,
+  }}>
     {/* Agent Name Header */}
     <Paper 
       sx={{ 
-        p: 2, 
-        mb: 3, 
-        bgcolor: 'primary.main', 
-        color: 'white',
-        borderRadius: 1
+        p: 3, 
+        mb: 4, 
+        background: 'linear-gradient(135deg, #001B3D 0%, #0A4D94 100%)',
+        color: '#fff',
+        borderRadius: 2,
+        border: '1px solid rgba(255,255,255,0.08)',
       }}
     >
-      <Typography variant="h5">{agent.agentName}</Typography>
+      <Typography variant="h4" sx={{ 
+        fontWeight: 600,
+        fontSize: '2rem',
+        color: '#fff',
+      }}>
+        {agent.agentName}
+      </Typography>
     </Paper>
 
-    {/* Basic Stats */}
-    <Typography variant="h6" gutterBottom sx={{ ml: 1 }}>Basic Stats</Typography>
-    <Grid container spacing={2} sx={{ mb: 3 }}>
+    {/* Section Headers */}
+    <Typography variant="h6" sx={{
+      color: '#fff',
+      fontSize: '1.1rem',
+      fontWeight: 500,
+      mb: 2,
+      ml: 1
+    }}>
+      Basic Stats
+    </Typography>
+
+    <Grid container spacing={2.5}>
       <Grid item xs={12} sm={6} md={3}>
         <StatCard
           title="Mindshare"
@@ -112,9 +166,17 @@ const AgentDetails = ({ agent }) => (
       </Grid>
     </Grid>
 
-    {/* Trading Stats */}
-    <Typography variant="h6" gutterBottom sx={{ ml: 1 }}>Trading Stats</Typography>
-    <Grid container spacing={2} sx={{ mb: 3 }}>
+    <Typography variant="h6" sx={{
+      color: '#fff',
+      fontSize: '1.1rem',
+      fontWeight: 500,
+      mb: 2,
+      ml: 1
+    }}>
+      Trading Stats
+    </Typography>
+
+    <Grid container spacing={2.5}>
       <Grid item xs={12} sm={6}>
         <StatCard
           title="24h Volume"
@@ -132,9 +194,17 @@ const AgentDetails = ({ agent }) => (
       </Grid>
     </Grid>
 
-    {/* Social Stats */}
-    <Typography variant="h6" gutterBottom sx={{ ml: 1 }}>Social Stats</Typography>
-    <Grid container spacing={2} sx={{ mb: 3 }}>
+    <Typography variant="h6" sx={{
+      color: '#fff',
+      fontSize: '1.1rem',
+      fontWeight: 500,
+      mb: 2,
+      ml: 1
+    }}>
+      Social Stats
+    </Typography>
+
+    <Grid container spacing={2.5}>
       {[
         { title: 'Followers', value: agent.followersCount },
         { title: 'Smart Followers', value: agent.smartFollowersCount },
@@ -155,9 +225,23 @@ const AgentDetails = ({ agent }) => (
       ))}
     </Grid>
 
-    {/* Contracts */}
-    <Typography variant="h6" gutterBottom sx={{ ml: 1 }}>Contracts</Typography>
-    <Paper sx={{ p: 2, mb: 3 }}>
+    <Typography variant="h6" sx={{
+      color: '#fff',
+      fontSize: '1.1rem',
+      fontWeight: 500,
+      mb: 2,
+      ml: 1
+    }}>
+      Contracts
+    </Typography>
+
+    <Paper sx={{ 
+      p: 3, 
+      my: 3,
+      background: 'linear-gradient(135deg, #001B3D 0%, #0A4D94 100%)',
+      borderRadius: 2,
+      border: '1px solid rgba(255,255,255,0.08)',
+    }}>
       <Stack spacing={2}>
         {agent.contracts.map((contract, index) => (
           <Box 
@@ -165,68 +249,100 @@ const AgentDetails = ({ agent }) => (
             sx={{ 
               display: 'flex', 
               alignItems: 'center',
-              bgcolor: 'grey.50',
+              background: 'rgba(0,27,61,0.5)',
               p: 2,
-              borderRadius: 1
+              borderRadius: 1,
+              border: '1px solid rgba(255,255,255,0.08)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateX(8px)',
+                background: 'rgba(10,77,148,0.3)',
+              }
             }}
           >
-            <Typography variant="body2" sx={{ mr: 2, minWidth: 100 }}>
+            <Typography sx={{ 
+              color: '#fff',
+              fontSize: '0.9rem'
+            }}>
               {contract.chain === -2 ? 'Solana' : `Chain ${contract.chain}`}:
             </Typography>
-            <Typography 
-              sx={{ 
-                fontFamily: 'monospace',
-                flex: 1,
-                fontSize: '0.875rem'
-              }}
-            >
+            <Typography sx={{ 
+              color: '#89CFF0',
+              flex: 1,
+              ml: 2,
+              fontFamily: 'monospace',
+              fontSize: '0.875rem'
+            }}>
               {contract.contractAddress}
             </Typography>
-            <IconButton 
-              size="small"
-              onClick={() => navigator.clipboard.writeText(contract.contractAddress)}
-            >
-              <ContentCopy fontSize="small" />
-            </IconButton>
           </Box>
         ))}
       </Stack>
     </Paper>
 
-    {/* Top Tweets */}
-    <Typography variant="h6" gutterBottom sx={{ ml: 1 }}>Top Tweets</Typography>
-    <Grid container spacing={2}>
+    <Typography variant="h6" sx={{
+      color: '#fff',
+      fontSize: '1.1rem',
+      fontWeight: 500,
+      mb: 2,
+      ml: 1
+    }}>
+      Top Tweets
+    </Typography>
+
+    <Grid container spacing={2.5}>
       {agent.topTweets.map((tweet, index) => (
         <Grid item xs={12} sm={6} md={4} key={index}>
-          <Paper sx={{ p: 2, height: '100%' }}>
+          <Paper sx={{ 
+            p: 3, 
+            height: '100%',
+            background: 'linear-gradient(135deg, #001B3D 0%, #0A4D94 100%)',
+            borderRadius: 2,
+            border: '1px solid rgba(255,255,255,0.08)',
+            '&:hover': {
+              transform: 'translateY(-4px)',
+              background: 'linear-gradient(135deg, #002152 0%, #0A5BAE 100%)',
+            }
+          }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <Avatar 
                 src={tweet.tweetAuthorProfileImageUrl} 
-                sx={{ width: 32, height: 32, mr: 1 }}
+                sx={{ 
+                  width: 32, 
+                  height: 32, 
+                  mr: 1,
+                  border: '2px solid rgba(255,255,255,0.2)'
+                }}
               />
-              <Typography variant="subtitle2">
+              <Typography variant="subtitle2" sx={{ color: '#fff' }}>
                 {tweet.tweetAuthorDisplayName}
               </Typography>
               <IconButton 
                 size="small" 
-                sx={{ ml: 'auto' }}
+                sx={{ 
+                  ml: 'auto',
+                  color: '#1DA1F2',
+                  '&:hover': {
+                    background: 'rgba(29,161,242,0.1)'
+                  }
+                }}
                 href={tweet.tweetUrl}
                 target="_blank"
               >
                 <Twitter fontSize="small" />
               </IconButton>
             </Box>
-            <Divider sx={{ my: 1 }} />
+            <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
             <Stack spacing={1}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Assessment sx={{ mr: 1, fontSize: 20 }} />
-                <Typography variant="body2">
+                <Assessment sx={{ mr: 1, fontSize: 20, color: '#89CFF0' }} />
+                <Typography variant="body2" sx={{ color: '#fff' }}>
                   Impressions: {tweet.impressionsCount.toLocaleString()}
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <People sx={{ mr: 1, fontSize: 20 }} />
-                <Typography variant="body2">
+                <People sx={{ mr: 1, fontSize: 20, color: '#89CFF0' }} />
+                <Typography variant="body2" sx={{ color: '#fff' }}>
                   Smart Engagement: {tweet.smartEngagementPoints}
                 </Typography>
               </Box>

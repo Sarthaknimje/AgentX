@@ -33,6 +33,8 @@ import { CircularProgress } from '@mui/material';
 import ComparisonTable from './components/ComparisonTable.js';
 import { calculateRSI, calculateMACD } from './utils/technicalAnalysis';
 import AgentDetails from './components/AgentDetails';
+import VoiceRecognition from './components/VoiceRecognition';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
 
@@ -56,14 +58,25 @@ function App() {
   recognition.interimResults = true;
 
   useEffect(() => {
+    // Get search parameter from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchParam = urlParams.get('search');
+    
+    // If search parameter exists, trigger search
+    if (searchParam) {
+        setSearchQuery(searchParam);
+        fetchAgentData(searchParam);
+    }
+    
+    // Rest of your useEffect code for speech recognition
     recognition.onresult = (event) => {
-      const current = event.resultIndex;
-      const transcript = event.results[current][0].transcript;
-      setTranscript(transcript);
-      
-      if (transcript.toLowerCase().includes('hey agent')) {
-        processCommand(transcript);
-      }
+        const current = event.resultIndex;
+        const transcript = event.results[current][0].transcript;
+        setTranscript(transcript);
+        
+        if (transcript.toLowerCase().includes('hey agent')) {
+            processCommand(transcript);
+        }
     };
 
     recognition.onerror = (event) => {
@@ -231,140 +244,148 @@ function App() {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Stack spacing={3}>
-        <Typography variant="h4" component="h1" align="center" gutterBottom>
-          CookieAI Assistant
-        </Typography>
+    <Router>
+      <Container maxWidth="xl" sx={{ py: 3 }}>
+        <Routes>
+          <Route path="/" element={
+            <Stack spacing={3}>
+              <Typography variant="h4" component="h1" align="center" gutterBottom>
+                CookieAI Assistant
+              </Typography>
 
-        {/* Search Form */}
-        <Paper component="form" onSubmit={handleSearch} sx={{ p: 2 }}>
-          <Stack spacing={2}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Enter Twitter username (e.g. cookiedotfun)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">@</InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton type="submit" edge="end">
-                      <SearchIcon />
-                    </IconButton>
-                    <IconButton 
-                      edge="end" 
-                      onClick={toggleListening}
-                      color={isListening ? 'error' : 'default'}
+              {/* Search Form */}
+              <Paper component="form" onSubmit={handleSearch} sx={{ p: 2 }}>
+                <Stack spacing={2}>
+                  <TextField
+                    fullWidth
+                    variant="outlined"
+                    placeholder="Enter Twitter username (e.g. cookiedotfun)"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">@</InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton type="submit" edge="end">
+                            <SearchIcon />
+                          </IconButton>
+                          <IconButton 
+                            edge="end" 
+                            onClick={toggleListening}
+                            color={isListening ? 'error' : 'default'}
+                          >
+                            <MicIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      )
+                    }}
+                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Time Interval</InputLabel>
+                    <Select
+                      value={interval}
+                      onChange={(e) => setInterval(e.target.value)}
+                      label="Time Interval"
                     >
-                      <MicIcon />
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-            />
-            <FormControl fullWidth>
-              <InputLabel>Time Interval</InputLabel>
-              <Select
-                value={interval}
-                onChange={(e) => setInterval(e.target.value)}
-                label="Time Interval"
+                      <MenuItem value="_3Days">3 Days</MenuItem>
+                      <MenuItem value="_7Days">7 Days</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </Paper>
+
+              <Button
+                variant="outlined"
+                onClick={() => setCompareMode(!compareMode)}
+                sx={{ mb: 2 }}
               >
-                <MenuItem value="_3Days">3 Days</MenuItem>
-                <MenuItem value="_7Days">7 Days</MenuItem>
-              </Select>
-            </FormControl>
-          </Stack>
-        </Paper>
+                {compareMode ? 'Exit Compare' : 'Compare Agents'}
+              </Button>
 
-        <Button
-          variant="outlined"
-          onClick={() => setCompareMode(!compareMode)}
-          sx={{ mb: 2 }}
-        >
-          {compareMode ? 'Exit Compare' : 'Compare Agents'}
-        </Button>
+              {compareMode && (
+                <TextField
+                  fullWidth
+                  placeholder="Enter username to compare"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleCompare(e.target.value);
+                    }
+                  }}
+                />
+              )}
 
-        {compareMode && (
-          <TextField
-            fullWidth
-            placeholder="Enter username to compare"
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleCompare(e.target.value);
-              }
-            }}
-          />
-        )}
+              <Button
+                variant="contained"
+                startIcon={<ShareIcon />}
+                onClick={handleShare}
+                sx={{ mt: 2 }}
+              >
+                Share Stats
+              </Button>
 
-        <Button
-          variant="contained"
-          startIcon={<ShareIcon />}
-          onClick={handleShare}
-          sx={{ mt: 2 }}
-        >
-          Share Stats
-        </Button>
+              <Button
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                onClick={exportData}
+                sx={{ mt: 2 }}
+              >
+                Export Data
+              </Button>
 
-        <Button
-          variant="outlined"
-          startIcon={<DownloadIcon />}
-          onClick={exportData}
-          sx={{ mt: 2 }}
-        >
-          Export Data
-        </Button>
+              <Box>
+                <Typography variant="subtitle2">Set Price Alert</Typography>
+                <TextField
+                  type="number"
+                  label="Alert Price"
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      setPriceAlertHandler(e.target.value);
+                    }
+                  }}
+                />
+              </Box>
 
-        <Box>
-          <Typography variant="subtitle2">Set Price Alert</Typography>
-          <TextField
-            type="number"
-            label="Alert Price"
-            InputProps={{
-              startAdornment: <InputAdornment position="start">$</InputAdornment>,
-            }}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                setPriceAlertHandler(e.target.value);
-              }
-            }}
-          />
-        </Box>
+              {loading && (
+                <Alert severity="info">Loading...</Alert>
+              )}
 
-        {loading && (
-          <Alert severity="info">Loading...</Alert>
-        )}
+              {error && (
+                <Alert severity="error">{error}</Alert>
+              )}
 
-        {error && (
-          <Alert severity="error">{error}</Alert>
-        )}
+              {transcript && (
+                <Paper sx={{ p: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold">Voice Input:</Typography>
+                  <Typography>{transcript}</Typography>
+                </Paper>
+              )}
 
-        {transcript && (
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle1" fontWeight="bold">Voice Input:</Typography>
-            <Typography>{transcript}</Typography>
-          </Paper>
-        )}
+              {compareMode && compareData && (
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <AgentDetails agent={agentData} />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <AgentDetails agent={compareData} />
+                  </Grid>
+                </Grid>
+              )}
 
-        {compareMode && compareData && (
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <AgentDetails agent={agentData} />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <AgentDetails agent={compareData} />
-            </Grid>
-          </Grid>
-        )}
-
-        {!compareMode && agentData && (
-          <AgentDetails agent={agentData} />
-        )}
-      </Stack>
-    </Container>
+              {!compareMode && agentData && (
+                <AgentDetails agent={agentData} />
+              )}
+            </Stack>
+          } />
+          <Route path="/agent/:username" element={<AgentDetails />} />
+        </Routes>
+        <VoiceRecognition />
+      </Container>
+    </Router>
   );
 }
 
