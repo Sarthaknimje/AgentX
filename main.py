@@ -375,22 +375,11 @@ class VoiceAssistant:
             # Switch to the newly opened tab
             self.driver.switch_to.window(self.driver.window_handles[-1])
             
-            # Wait for the table to load
-            WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "agent-row"))
-            )
-            
-            # Read out top 3 agents
-            self.speak("Here are the top 3 agents by mindshare")
-            rows = self.driver.find_elements(By.CLASS_NAME, "agent-row")[:3]
-            for i, row in enumerate(rows, 1):
-                name = row.find_element(By.CLASS_NAME, "agent-name").text
-                mindshare = row.find_element(By.CLASS_NAME, "mindshare-value").text
-                self.speak(f"Number {i}: {name} with mindshare of {mindshare}")
+            # Just wait for page load without trying to read data
+            time.sleep(3)  # Give more time for the page to load
             
         except Exception as e:
             print(f"Error showing top agents: {e}")
-            self.speak("Sorry, I couldn't load the top agents page")
 
     def listen(self):
         """Listen for voice commands"""
