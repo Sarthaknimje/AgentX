@@ -73,6 +73,35 @@ app.get('/api/agents/contractAddress/:contractAddress', async (req, res) => {
   }
 });
 
+// Add new endpoint for paged agents
+app.get('/api/v2/agents/agentsPaged', async (req, res) => {
+  try {
+    const { interval = '_7Days', page = 1, pageSize = 10 } = req.query;
+    
+    const response = await axios.get(
+      'https://api.cookie.fun/v2/agents/agentsPaged',
+      {
+        params: {
+          interval,
+          page,
+          pageSize
+        },
+        headers: {
+          'x-api-key': process.env.COOKIE_API_KEY
+        }
+      }
+    );
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error fetching paged agents:', error);
+    res.status(error.response?.status || 500).json({
+      success: false,
+      error: error.response?.data?.error || 'Failed to fetch agents'
+    });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server is running on port: ${port}`);
 });

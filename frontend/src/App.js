@@ -25,7 +25,9 @@ import {
   FormGroup,
   FormControlLabel,
   Radio,
-  RadioGroup
+  RadioGroup,
+  AppBar,
+  Toolbar
 } from '@mui/material';
 import { Search as SearchIcon, Mic as MicIcon, Share as ShareIcon, Download as DownloadIcon } from '@mui/icons-material';
 import axios from 'axios';
@@ -36,7 +38,8 @@ import ComparisonTable from './components/ComparisonTable.js';
 import { calculateRSI, calculateMACD } from './utils/technicalAnalysis';
 import AgentDetails from './components/AgentDetails';
 import VoiceRecognition from './components/VoiceRecognition';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import TopAgents from './components/TopAgents';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
 
@@ -319,6 +322,26 @@ function App() {
   return (
     <Router>
       <Container maxWidth="xl" sx={{ py: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+        {/* Add navigation buttons */}
+        <Stack direction="row" spacing={2} mb={3}>
+          <Button
+            component={Link}
+            to="/"
+            variant="contained"
+            color="primary"
+          >
+            Search Agents
+          </Button>
+          <Button
+            component={Link}
+            to="/top-agents"
+            variant="contained"
+            color="secondary"
+          >
+            Top Agents
+          </Button>
+        </Stack>
+
         <Routes>
           <Route path="/" element={
             <Stack spacing={3}>
@@ -506,12 +529,14 @@ function App() {
               {!compareMode && agentData && (
                 <AgentDetails agent={agentData} />
               )}
+
+              <TopAgents />
             </Stack>
           } />
-          <Route path="/agent/:username" element={<AgentDetails />} />
+          <Route path="/top-agents" element={<TopAgents />} />
         </Routes>
-        <VoiceRecognition />
       </Container>
+      <VoiceRecognition />
     </Router>
   );
 }

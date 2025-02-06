@@ -114,6 +114,10 @@ class VoiceAssistant:
         elif 'export data' in command:
             self.handle_export_data()
 
+        # Show top agents command
+        elif any(phrase in command for phrase in ['show top agents', 'show trending agents', 'show agent rankings']):
+            self.handle_show_top_agents()
+
     def handle_check_agent(self):
         """Handle the check agent command"""
         # First check for contract address (prioritize DexScreener)
@@ -352,6 +356,41 @@ class VoiceAssistant:
         except Exception as e:
             print(f"Error getting contract address: {e}")
             return None
+
+    def handle_show_top_agents(self):
+        """Handle the show top agents command"""
+        self.speak("Opening top agents rankings")
+        try:
+            # Check API connection
+            try:
+                requests.get(self.api_url, timeout=2)
+            except requests.exceptions.ConnectionError:
+                self.speak("Sorry, I cannot connect to the API server. Please make sure it's running.")
+                return
+            
+            # Open top agents page
+            webbrowser.open(f"{self.frontend_url}/top-agents")
+            time.sleep(2)
+            
+            # Switch to the newly opened tab
+            self.driver.switch_to.window(self.driver.window_handles[-1])
+            
+            # Wait for the table to load
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "agent-row"))
+            )
+            
+            # Read out top 3 agents
+            self.speak("Here are the top 3 agents by mindshare")
+            rows = self.driver.find_elements(By.CLASS_NAME, "agent-row")[:3]
+            for i, row in enumerate(rows, 1):
+                name = row.find_element(By.CLASS_NAME, "agent-name").text
+                mindshare = row.find_element(By.CLASS_NAME, "mindshare-value").text
+                self.speak(f"Number {i}: {name} with mindshare of {mindshare}")
+            
+        except Exception as e:
+            print(f"Error showing top agents: {e}")
+            self.speak("Sorry, I couldn't load the top agents page")
 
     def listen(self):
         """Listen for voice commands"""
