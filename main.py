@@ -118,6 +118,18 @@ class VoiceAssistant:
         elif any(phrase in command for phrase in ['show top agents', 'show trending agents', 'show agent rankings']):
             self.handle_show_top_agents()
 
+        # Search tweets command
+        elif 'search tweets' in command:
+            # Extract search query after "search tweets for"
+            search_match = re.search(r'search tweets (?:for )?([^from]+)(?:from (.+?))?(?:to (.+))?$', command)
+            if search_match:
+                query = search_match.group(1).strip()
+                from_date = search_match.group(2).strip() if search_match.group(2) else None
+                to_date = search_match.group(3).strip() if search_match.group(3) else None
+                self.handle_search_tweets(query, from_date, to_date)
+            else:
+                self.speak("Please specify what to search for")
+
     def handle_check_agent(self):
         """Handle the check agent command"""
         # First check for contract address (prioritize DexScreener)
@@ -380,6 +392,43 @@ class VoiceAssistant:
             
         except Exception as e:
             print(f"Error showing top agents: {e}")
+
+    def handle_search_tweets(self, query, from_date=None, to_date=None):
+        """Handle searching tweets command"""
+        self.speak(f"Searching tweets for {query}")
+        
+        try:
+            # Format the API URL with query parameters
+            search_url = f"{self.api_url}/search/{query}"
+            if from_date:
+                search_url += f"?from={from_date}"
+            if to_date:
+                search_url += f"&to={to_date}" if from_date else f"?to={to_date}"
+            
+            # Make API request
+            response = requests.get(search_url, timeout=5)
+            
+            if response.status_code == 200 and response.json().get('ok'):
+                tweets = response.json()['ok']
+                
+                # Open frontend with search results
+                webbrowser.open(f"{self.frontend_url}/search?q={query}")
+                time.sleep(2)
+                
+                # Switch to the newly opened tab
+                self.driver.switch_to.window(self.driver.window_handles[-1])
+                
+                # Read out top 3 tweets
+                self.speak(f"Found {len(tweets)} tweets. Here are the top results:")
+                for i, tweet in enumerate(tweets[:3], 1):
+                    self.speak(f"Tweet {i} by {tweet['authorUsername']}: {tweet['text']}")
+                
+            else:
+                self.speak("Sorry, I couldn't find any tweets matching your search")
+            
+        except Exception as e:
+            print(f"Error searching tweets: {e}")
+            self.speak("Sorry, there was an error searching tweets")
 
     def listen(self):
         """Listen for voice commands"""

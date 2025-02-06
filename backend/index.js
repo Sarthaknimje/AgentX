@@ -7,7 +7,11 @@ const app = express();
 const port = process.env.PORT || 5001;
 
 // Enable CORS for all routes
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5003', 'http://localhost:3000'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-api-key', 'Authorization']
+}));
 app.use(express.json());
 
 // Health check endpoint
@@ -98,6 +102,41 @@ app.get('/api/v2/agents/agentsPaged', async (req, res) => {
     res.status(error.response?.status || 500).json({
       success: false,
       error: error.response?.data?.error || 'Failed to fetch agents'
+    });
+  }
+});
+
+// Add tweet search endpoint
+app.get('/api/search/:query', async (req, res) => {
+  try {
+    const { query } = req.params;
+    const { from, to } = req.query;
+    
+    console.log(`Searching tweets for: ${query}, from: ${from}, to: ${to}`);
+    
+    const response = await axios.get(
+      `https://api.cookie.fun/v1/hackathon/search/${encodeURIComponent(query)}`,
+      {
+        params: { from, to },
+        headers: {
+          'x-api-key': process.env.COOKIE_API_KEY
+        }
+      }
+    );
+    
+    if (response.data.ok) {
+      res.json(response.data);
+    } else {
+      res.status(404).json({
+        success: false,
+        error: 'No tweets found'
+      });
+    }
+  } catch (error) {
+    console.error('Search API Error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      success: false,
+      error: error.response?.data?.error || 'Failed to search tweets'
     });
   }
 });

@@ -40,6 +40,7 @@ import AgentDetails from './components/AgentDetails';
 import VoiceRecognition from './components/VoiceRecognition';
 import TopAgents from './components/TopAgents';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import TweetSearch from './components/TweetSearch';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
 
@@ -340,6 +341,14 @@ function App() {
           >
             Top Agents
           </Button>
+          <Button
+            component={Link}
+            to="/search-tweets"
+            variant="contained"
+            color="info"
+          >
+            Search Tweets
+          </Button>
         </Stack>
 
         <Routes>
@@ -534,6 +543,7 @@ function App() {
             </Stack>
           } />
           <Route path="/top-agents" element={<TopAgents />} />
+          <Route path="/search-tweets" element={<TweetSearch />} />
         </Routes>
       </Container>
       <VoiceRecognition />
