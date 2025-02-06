@@ -4,10 +4,19 @@ import { Mic, MicOff } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const VoiceRecognition = () => {
+const VoiceRecognition = ({ 
+  agentData, 
+  onCompare, 
+  onShowTrends, 
+  onSetAlert, 
+  onExportData 
+}) => {
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState(null);
   const navigate = useNavigate();
+  const [compareData, setCompareData] = useState(null);
+  const [showTrends, setShowTrends] = useState(false);
+  const [priceAlert, setPriceAlert] = useState(null);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -21,11 +30,26 @@ const VoiceRecognition = () => {
           .map(result => result[0])
           .map(result => result.transcript)
           .join('');
-
-        console.log('Transcript:', transcript); // Debug log
         
-        if (transcript.toLowerCase().includes('cookie check this agent')) {
-          handleCommand();
+        console.log('Transcript:', transcript);
+        
+        if (transcript.toLowerCase().includes('cookie')) {
+          const command = transcript.toLowerCase();
+          
+          if (command.includes('check this agent')) {
+            handleCommand();
+          }
+          else if (command.includes('compare with')) {
+            const username = command.split('compare with @')[1]?.trim();
+            if (username) handleCompare(username);
+          }
+          else if (command.includes('show trends')) {
+            handleShowTrends();
+          }
+          else if (command.includes('set price alert')) {
+            const priceMatch = command.match(/alert (?:for|at) (\d+(?:\.\d+)?)/);
+            if (priceMatch) handleSetAlert(parseFloat(priceMatch[1]));
+          }
         }
       };
 
@@ -64,6 +88,33 @@ const VoiceRecognition = () => {
       console.error('Error:', error);
       speakResponse('Sorry, there was an error processing your request');
     }
+  };
+
+  const handleCompare = async (username) => {
+    speakResponse(`Comparing with ${username}`);
+    try {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/agents/${username}`);
+      if (response.data.ok) {
+        onCompare(response.data.ok);
+        speakResponse(`Comparison data loaded for ${username}`);
+      }
+    } catch (error) {
+      speakResponse('Sorry, could not fetch comparison data');
+    }
+  };
+
+  const handleShowTrends = () => {
+    if (agentData) {
+      setShowTrends(true);
+      speakResponse('Showing market trends');
+    } else {
+      speakResponse('Please search for an agent first');
+    }
+  };
+
+  const handleSetAlert = (price) => {
+    onSetAlert(price);
+    speakResponse(`Alert set for $${price}`);
   };
 
   const extractTwitterUsername = (url) => {

@@ -20,52 +20,35 @@ class VoiceAssistant:
     def __init__(self):
         print("Initializing voice assistant...")
         
-        # Initialize speech recognition
+        # Initialize speech recognition with optimized settings
         self.recognizer = sr.Recognizer()
         self.recognizer.energy_threshold = 4000
         self.recognizer.dynamic_energy_threshold = False
         self.recognizer.pause_threshold = 0.5
         
-        # Initialize Chrome driver with retry logic
-        self.initialize_chrome_driver()
+        # Initialize Chrome with debugging options
+        print("Connecting to Chrome...")
+        chrome_options = Options()
+        chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+        chrome_options.add_argument("--remote-debugging-port=9222")
+        try:
+            print("Attempting to connect to Chrome (timeout: 10s)...")
+            self.driver = webdriver.Chrome(options=chrome_options)
+            WebDriverWait(self.driver, 10).until(lambda driver: driver.current_url)
+            print(f"Successfully connected to Chrome. Current URL: {self.driver.current_url}")
+        except Exception as e:
+            print("\nError: Could not connect to Chrome")
+            print("Please make sure Chrome is running with remote debugging enabled")
+            print("Run: open -a 'Google Chrome' --args --remote-debugging-port=9222")
+            raise e
         
         # API configuration
         self.api_url = os.getenv('API_URL', 'http://localhost:5002/api')
         self.frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5003')
         print("Initialization complete!")
 
-    def initialize_chrome_driver(self):
-        """Initialize Chrome driver with retry logic"""
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                print("\nConnecting to Chrome...")
-                chrome_options = Options()
-                chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
-                chrome_options.add_argument("--remote-debugging-port=9222")
-                
-                self.driver = webdriver.Chrome(options=chrome_options)
-                # Verify connection
-                WebDriverWait(self.driver, 10).until(lambda driver: driver.current_url)
-                print(f"Successfully connected to Chrome. Current URL: {self.driver.current_url}")
-                return
-                
-            except Exception as e:
-                print(f"\nAttempt {attempt + 1} failed: {e}")
-                if attempt < max_retries - 1:
-                    print("Retrying in 2 seconds...")
-                    time.sleep(2)
-                    continue
-                else:
-                    print("\nError: Could not connect to Chrome")
-                    print("Please ensure Chrome is running with remote debugging enabled:")
-                    print("1. Close all Chrome windows")
-                    print("2. Run: open -a 'Google Chrome' --args --remote-debugging-port=9222")
-                    print("3. Try again")
-                    raise e
-
     def get_current_twitter_username(self):
-        """Extract username from current Twitter tab"""
+        """Extract Twitter username from current URL"""
         try:
             # Get all Chrome tabs
             tabs = self.driver.window_handles

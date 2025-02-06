@@ -45,7 +45,7 @@ app.get('/api/agents/:username', async (req, res) => {
   }
 });
 
-// Add after the username endpoint
+// Add new contract address endpoint
 app.get('/api/agents/contractAddress/:contractAddress', async (req, res) => {
   try {
     const { contractAddress } = req.params;
