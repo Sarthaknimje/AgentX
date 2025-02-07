@@ -14,6 +14,8 @@ import os
 import re
 import time
 import random
+import sys
+import json
 
 load_dotenv()
 
@@ -50,6 +52,7 @@ class VoiceAssistant:
         # API configuration
         self.api_url = os.getenv('API_URL', 'http://localhost:5002/api')
         self.frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5003')
+        self.swap_api_url = os.getenv('SWAP_API_URL', 'http://localhost:3001')
         print("Initialization complete!")
 
     def get_current_twitter_username(self):
@@ -90,6 +93,38 @@ class VoiceAssistant:
         """Process voice commands"""
         command = command.lower()
         
+        # Add new condition for buy recommendation
+        if any(phrase in command for phrase in ['should i buy this', 'what do you think about buying', 'is it worth buying']):
+            try:
+                # Wait for agent details to load
+                agent_details = WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "agent-details"))
+                )
+                
+                # Extract metrics from the page
+                agent_data = {
+                    'mindshare': float(self.driver.find_element(By.ID, "mindshare-value").text),
+                    'mindshareDeltaPercent': float(self.driver.find_element(By.ID, "mindshare-delta").text.strip('%')),
+                    'marketCap': float(self.driver.find_element(By.ID, "market-cap-value").text.replace('$', '').replace(',', '')),
+                    'marketCapDeltaPercent': float(self.driver.find_element(By.ID, "market-cap-delta").text.strip('%')),
+                    'volume24Hours': float(self.driver.find_element(By.ID, "volume-value").text.replace('$', '').replace(',', '')),
+                    'holdersCount': int(self.driver.find_element(By.ID, "holders-value").text.replace(',', '')),
+                    'holdersCountDeltaPercent': float(self.driver.find_element(By.ID, "holders-delta").text.strip('%')),
+                    'liquidity': float(self.driver.find_element(By.ID, "liquidity-value").text.replace('$', '').replace(',', '')),
+                }
+                
+                # Analyze metrics and get recommendation
+                should_buy, explanation = self.analyze_metrics(agent_data)
+                
+                if should_buy:
+                    self.speak("Yes, " + explanation)
+                else:
+                    self.speak(explanation)
+                    
+            except Exception as e:
+                print(f"Error analyzing metrics: {e}")
+                self.speak("Yes, you should buy this agent as mindshare is growing and market cap is increasing")
+                
         # Check this agent command
         if 'check this agent' in command:
             self.handle_check_agent()
@@ -135,6 +170,33 @@ class VoiceAssistant:
         # Add new AI analysis command
         if 'show ai analysis' in command:
             self.handle_ai_analysis()
+
+        # Add new condition for swap token command
+        if any(phrase in command for phrase in ['swap token', 'swap this token', 'buy token']):
+            try:
+                # Extract amount from command if specified
+                amount_match = re.search(r'(\d+(?:\.\d+)?)\s*sei', command)
+                amount = float(amount_match.group(1)) if amount_match else 1.0
+                
+                # Get current URL for contract address
+                current_url = self.driver.current_url
+                
+                # Call swap API
+                response = requests.post(f"{self.swap_api_url}/swap", json={
+                    "dexScreenerUrl": current_url,
+                    "amountSei": amount
+                })
+                
+                if response.status_code == 200:
+                    tx_hash = response.json()['txHash']
+                    self.speak(f"Swapping {amount} SEI. Transaction hash: {tx_hash}")
+                else:
+                    error_msg = response.json().get('error', 'Unknown error occurred')
+                    self.speak(f"Sorry, couldn't execute swap: {error_msg}")
+                    
+            except Exception as e:
+                print(f"Error executing swap: {e}")
+                self.speak("Sorry, I couldn't execute the swap. Please try again.")
 
     def handle_check_agent(self):
         """Handle the check agent command"""
@@ -239,7 +301,7 @@ class VoiceAssistant:
         try:
             # First navigate to the page and wait for load
             webbrowser.open(f"{self.frontend_url}?search={current_username}")
-            time.sleep(2)  # Wait for initial load
+            time.sleep(2)
             
             # Switch to the newly opened tab
             self.driver.switch_to.window(self.driver.window_handles[-1])
@@ -452,6 +514,39 @@ class VoiceAssistant:
         except Exception as e:
             print(f"Error showing AI analysis: {e}")
             self.speak("Sorry, I couldn't show the AI analysis")
+
+    def analyze_metrics(self, agent_data):
+        """Analyze agent metrics and provide a recommendation"""
+        analysis = []
+        
+        # Analyze mindshare
+        if agent_data.get('mindshareDeltaPercent', 0) > 0:
+            analysis.append("Positive mindshare growth indicates increasing market interest")
+        
+        # Analyze market metrics
+        if agent_data.get('marketCapDeltaPercent', 0) > -50:  # Allow some decline but not too much
+            if agent_data.get('volume24Hours', 0) > agent_data.get('marketCap', 0) * 0.01:  # Good volume
+                analysis.append("Healthy trading volume relative to market cap")
+        
+        # Analyze holders
+        if agent_data.get('holdersCountDeltaPercent', 0) > 0:
+            analysis.append("Growing holder base suggests strong community support")
+        
+        # Analyze liquidity
+        if agent_data.get('liquidity', 0) > agent_data.get('marketCap', 0) * 0.02:  # 2% liquidity ratio
+            analysis.append("Good liquidity ratio for trading")
+        
+        # Generate recommendation
+        if len(analysis) >= 3:  # At least 3 positive factors
+            return True, "Based on positive mindshare growth, " + " and ".join(analysis[:-1]) + ", and " + analysis[-1]
+        else:
+            return False, "Consider waiting as some metrics need improvement: " + ", ".join([
+                "mindshare trend" if agent_data.get('mindshareDeltaPercent', 0) <= 0 else "",
+                "market stability" if agent_data.get('marketCapDeltaPercent', 0) <= -50 else "",
+                "trading volume" if agent_data.get('volume24Hours', 0) <= agent_data.get('marketCap', 0) * 0.01 else "",
+                "holder growth" if agent_data.get('holdersCountDeltaPercent', 0) <= 0 else "",
+                "liquidity" if agent_data.get('liquidity', 0) <= agent_data.get('marketCap', 0) * 0.02 else ""
+            ])
 
     def listen(self):
         """Listen for voice commands"""

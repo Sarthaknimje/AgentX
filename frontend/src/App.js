@@ -40,6 +40,7 @@ import VoiceRecognition from './components/VoiceRecognition';
 import TopAgents from './components/TopAgents';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import TweetSearch from './components/TweetSearch';
+import ErrorBoundary from './components/ErrorBoundary';
 
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
@@ -322,237 +323,239 @@ function App() {
   };
 
   return (
-    <Router>
-      <Container maxWidth="xl" sx={{ 
-        py: 3, 
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)'
-      }}>
-        {/* Add navigation buttons */}
-        <Stack direction="row" spacing={2} mb={3}>
-          <Button
-            component={Link}
-            to="/"
-            variant="contained"
-            color="primary"
-          >
-            Search Agents
-          </Button>
-          <Button
-            component={Link}
-            to="/top-agents"
-            variant="contained"
-            color="secondary"
-          >
-            Top Agents
-          </Button>
-          <Button
-            component={Link}
-            to="/search-tweets"
-            variant="contained"
-            color="info"
-          >
-            Search Tweets
-          </Button>
-        </Stack>
+    <ErrorBoundary>
+      <Router>
+        <Container maxWidth="xl" sx={{ 
+          py: 3, 
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)'
+        }}>
+          {/* Add navigation buttons */}
+          <Stack direction="row" spacing={2} mb={3}>
+            <Button
+              component={Link}
+              to="/"
+              variant="contained"
+              color="primary"
+            >
+              Search Agents
+            </Button>
+            <Button
+              component={Link}
+              to="/top-agents"
+              variant="contained"
+              color="secondary"
+            >
+              Top Agents
+            </Button>
+            <Button
+              component={Link}
+              to="/search-tweets"
+              variant="contained"
+              color="info"
+            >
+              Search Tweets
+            </Button>
+          </Stack>
 
-        <Routes>
-          <Route path="/" element={
-            <Stack spacing={3}>
-              <Typography variant="h4" component="h1" align="center" gutterBottom>
-                CookieAI Assistant
-              </Typography>
+          <Routes>
+            <Route path="/" element={
+              <Stack spacing={3}>
+                <Typography variant="h4" component="h1" align="center" gutterBottom>
+                  AgentX
+                </Typography>
 
-              {/* Search Mode Selection */}
-              <Paper sx={{ p: 2 }}>
-                <RadioGroup
-                  row
-                  value={searchMode}
-                  onChange={(e) => setSearchMode(e.target.value)}
-                >
-                  <FormControlLabel 
-                    value="username" 
-                    control={<Radio />} 
-                    label="Search by Username" 
-                  />
-                  <FormControlLabel
-                    value="contract"
-                    control={<Radio id="contract-search-radio" />}
-                    label="Search by Contract"
-                  />
-                </RadioGroup>
-              </Paper>
-
-              {/* Username Search Form */}
-              {searchMode === 'username' && (
-                <Paper component="form" onSubmit={handleSearch} sx={{ p: 2 }}>
-                  <Stack spacing={2}>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      placeholder="Enter Twitter username (e.g. cookiedotfun)"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">@</InputAdornment>
-                        ),
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <IconButton type="submit">
-                              <SearchIcon />
-                            </IconButton>
-                          </InputAdornment>
-                        )
-                      }}
-                    />
-                  </Stack>
-                </Paper>
-              )}
-
-              {/* Contract Address Search Form */}
-              {searchMode === 'contract' && (
-                <Paper component="form" onSubmit={handleContractSearch} sx={{ p: 2 }}>
-                  <Stack spacing={2}>
-                    <TextField
-                      id="contract-search-input"
-                      fullWidth
-                      variant="outlined"
-                      placeholder="Enter contract address (e.g. 0xc0041ef357...)"
-                      value={contractAddress}
-                      onChange={(e) => setContractAddress(e.target.value)}
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <IconButton type="submit">
-                              <SearchIcon />
-                            </IconButton>
-                          </InputAdornment>
-                        )
-                      }}
-                    />
-                    <Typography variant="caption" color="text.secondary">
-                      Supports EVM chains and Solana blockchain contracts
-                    </Typography>
-                  </Stack>
-                </Paper>
-              )}
-
-              {/* Time Interval Selection */}
-              <Paper sx={{ p: 2 }}>
-                <FormControl fullWidth>
-                  <InputLabel>Time Interval</InputLabel>
-                  <Select
-                    value={interval}
-                    onChange={(e) => setInterval(e.target.value)}
-                    label="Time Interval"
-                  >
-                    <MenuItem value="_3Days">3 Days</MenuItem>
-                    <MenuItem value="_7Days">7 Days</MenuItem>
-                  </Select>
-                </FormControl>
-              </Paper>
-
-              <Button
-                variant="outlined"
-                onClick={() => setCompareMode(!compareMode)}
-                sx={{ mb: 2 }}
-              >
-                {compareMode ? 'Exit Compare' : 'Compare Agents'}
-              </Button>
-
-              {compareMode && (
-                <TextField
-                  fullWidth
-                  placeholder="Enter username to compare"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleCompare(e.target.value);
-                    }
-                  }}
-                />
-              )}
-
-              <Button
-                id="share-button"
-                variant="contained"
-                startIcon={<ShareIcon />}
-                onClick={handleShare}
-                sx={{ mt: 2 }}
-              >
-                Share Stats
-              </Button>
-
-              <Button
-                id="export-button"
-                variant="outlined"
-                startIcon={<DownloadIcon />}
-                onClick={exportData}
-                sx={{ mt: 2 }}
-              >
-                Export Data
-              </Button>
-
-              <Box id="trends-section">
-                {showTrends && (
-                  <MultiMetricChart data={agentData.historicalData} />
-                )}
-              </Box>
-
-              <Box>
-                <TextField
-                  id="price-alert-input"
-                  type="number"
-                  label="Set Price Alert"
-                  variant="outlined"
-                  size="small"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      setPriceAlertHandler(e.target.value);
-                    }
-                  }}
-                />
-              </Box>
-
-              {loading && (
-                <Alert severity="info">Loading...</Alert>
-              )}
-
-              {error && (
-                <Alert severity="error">{error}</Alert>
-              )}
-
-              {transcript && (
+                {/* Search Mode Selection */}
                 <Paper sx={{ p: 2 }}>
-                  <Typography variant="subtitle1" fontWeight="bold">Voice Input:</Typography>
-                  <Typography>{transcript}</Typography>
+                  <RadioGroup
+                    row
+                    value={searchMode}
+                    onChange={(e) => setSearchMode(e.target.value)}
+                  >
+                    <FormControlLabel 
+                      value="username" 
+                      control={<Radio />} 
+                      label="Search by Username" 
+                    />
+                    <FormControlLabel
+                      value="contract"
+                      control={<Radio id="contract-search-radio" />}
+                      label="Search by Contract"
+                    />
+                  </RadioGroup>
                 </Paper>
-              )}
 
-              {compareMode && compareData && (
-                <>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                      <AgentDetails agent={agentData} />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <AgentDetails agent={compareData} />
-                    </Grid>
-                  </Grid>
-                </>
-              )}
+                {/* Username Search Form */}
+                {searchMode === 'username' && (
+                  <Paper component="form" onSubmit={handleSearch} sx={{ p: 2 }}>
+                    <Stack spacing={2}>
+                      <TextField
+                        fullWidth
+                        variant="outlined"
+                        placeholder="Enter Twitter username (e.g. cookiedotfun)"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">@</InputAdornment>
+                          ),
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton type="submit">
+                                <SearchIcon />
+                              </IconButton>
+                            </InputAdornment>
+                          )
+                        }}
+                      />
+                    </Stack>
+                  </Paper>
+                )}
 
-              {!compareMode && agentData && (
-                <AgentDetails agent={agentData} />
-              )}
-            </Stack>
-          } />
-          <Route path="/top-agents" element={<TopAgents />} />
-          <Route path="/search-tweets" element={<TweetSearch />} />
-        </Routes>
-      </Container>
-      <VoiceRecognition />
-    </Router>
+                {/* Contract Address Search Form */}
+                {searchMode === 'contract' && (
+                  <Paper component="form" onSubmit={handleContractSearch} sx={{ p: 2 }}>
+                    <Stack spacing={2}>
+                      <TextField
+                        id="contract-search-input"
+                        fullWidth
+                        variant="outlined"
+                        placeholder="Enter contract address (e.g. 0xc0041ef357...)"
+                        value={contractAddress}
+                        onChange={(e) => setContractAddress(e.target.value)}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton type="submit">
+                                <SearchIcon />
+                              </IconButton>
+                            </InputAdornment>
+                          )
+                        }}
+                      />
+                      <Typography variant="caption" color="text.secondary">
+                        Supports EVM chains and Solana blockchain contracts
+                      </Typography>
+                    </Stack>
+                  </Paper>
+                )}
+
+                {/* Time Interval Selection */}
+                <Paper sx={{ p: 2 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Time Interval</InputLabel>
+                    <Select
+                      value={interval}
+                      onChange={(e) => setInterval(e.target.value)}
+                      label="Time Interval"
+                    >
+                      <MenuItem value="_3Days">3 Days</MenuItem>
+                      <MenuItem value="_7Days">7 Days</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Paper>
+
+                <Button
+                  variant="outlined"
+                  onClick={() => setCompareMode(!compareMode)}
+                  sx={{ mb: 2 }}
+                >
+                  {compareMode ? 'Exit Compare' : 'Compare Agents'}
+                </Button>
+
+                {compareMode && (
+                  <TextField
+                    fullWidth
+                    placeholder="Enter username to compare"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleCompare(e.target.value);
+                      }
+                    }}
+                  />
+                )}
+
+                <Button
+                  id="share-button"
+                  variant="contained"
+                  startIcon={<ShareIcon />}
+                  onClick={handleShare}
+                  sx={{ mt: 2 }}
+                >
+                  Share Stats
+                </Button>
+
+                <Button
+                  id="export-button"
+                  variant="outlined"
+                  startIcon={<DownloadIcon />}
+                  onClick={exportData}
+                  sx={{ mt: 2 }}
+                >
+                  Export Data
+                </Button>
+
+                <Box id="trends-section">
+                  {showTrends && (
+                    <MultiMetricChart data={agentData.historicalData} />
+                  )}
+                </Box>
+
+                <Box>
+                  <TextField
+                    id="price-alert-input"
+                    type="number"
+                    label="Set Price Alert"
+                    variant="outlined"
+                    size="small"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        setPriceAlertHandler(e.target.value);
+                      }
+                    }}
+                  />
+                </Box>
+
+                {loading && (
+                  <Alert severity="info">Loading...</Alert>
+                )}
+
+                {error && (
+                  <Alert severity="error">{error}</Alert>
+                )}
+
+                {transcript && (
+                  <Paper sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" fontWeight="bold">Voice Input:</Typography>
+                    <Typography>{transcript}</Typography>
+                  </Paper>
+                )}
+
+                {compareMode && compareData && (
+                  <>
+                    <Grid container spacing={3}>
+                      <Grid item xs={12} md={6}>
+                        <AgentDetails agent={agentData} />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <AgentDetails agent={compareData} />
+                      </Grid>
+                    </Grid>
+                  </>
+                )}
+
+                {!compareMode && agentData && (
+                  <AgentDetails agent={agentData} />
+                )}
+              </Stack>
+            } />
+            <Route path="/top-agents" element={<TopAgents />} />
+            <Route path="/search-tweets" element={<TweetSearch />} />
+          </Routes>
+        </Container>
+        <VoiceRecognition />
+      </Router>
+    </ErrorBoundary>
   );
 }
 
