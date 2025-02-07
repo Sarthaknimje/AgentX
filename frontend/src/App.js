@@ -41,6 +41,7 @@ import VoiceRecognition from './components/VoiceRecognition';
 import TopAgents from './components/TopAgents';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import TweetSearch from './components/TweetSearch';
+import AIAnalysis from './components/AIAnalysis';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
 
@@ -58,6 +59,7 @@ function App() {
   const [showTrends, setShowTrends] = useState(false);
   const [searchMode, setSearchMode] = useState('username');
   const [contractAddress, setContractAddress] = useState('');
+  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
 
   // Initialize speech recognition
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -181,6 +183,8 @@ function App() {
       if (response.data.ok) {
         setAgentData(response.data.ok);
         speakResponse(`Found data for ${response.data.ok.agentName}. Current mindshare is ${response.data.ok.mindshare.toFixed(2)}`);
+        // Auto show AI analysis
+        setShowAIAnalysis(true);
       } else {
         setError('No data found');
       }
@@ -322,7 +326,11 @@ function App() {
 
   return (
     <Router>
-      <Container maxWidth="xl" sx={{ py: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+      <Container maxWidth="xl" sx={{ 
+        py: 3, 
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)'
+      }}>
         {/* Add navigation buttons */}
         <Stack direction="row" spacing={2} mb={3}>
           <Button
@@ -525,21 +533,25 @@ function App() {
               )}
 
               {compareMode && compareData && (
-                <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
-                    <AgentDetails agent={agentData} />
+                <>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} md={6}>
+                      <AgentDetails agent={agentData} />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <AgentDetails agent={compareData} />
+                    </Grid>
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <AgentDetails agent={compareData} />
-                  </Grid>
-                </Grid>
+                  <AIAnalysis 
+                    data={{ agent1: agentData, agent2: compareData }} 
+                    type="comparison" 
+                  />
+                </>
               )}
 
               {!compareMode && agentData && (
                 <AgentDetails agent={agentData} />
               )}
-
-              <TopAgents />
             </Stack>
           } />
           <Route path="/top-agents" element={<TopAgents />} />

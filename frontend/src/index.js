@@ -1,18 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import './index.css';
 import App from './App';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import reportWebVitals from './reportWebVitals';
 import ErrorBoundary from './components/ErrorBoundary';
-
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-  },
-});
+import { theme } from './theme';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

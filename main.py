@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 import os
 import re
 import time
+import random
 
 load_dotenv()
 
@@ -22,9 +23,13 @@ class VoiceAssistant:
         
         # Initialize speech recognition with optimized settings
         self.recognizer = sr.Recognizer()
-        self.recognizer.energy_threshold = 4000
-        self.recognizer.dynamic_energy_threshold = False
-        self.recognizer.pause_threshold = 0.5
+        self.recognizer.energy_threshold = 300  # Lower threshold for better sensitivity
+        self.recognizer.dynamic_energy_threshold = True  # Enable dynamic adjustment
+        self.recognizer.dynamic_energy_adjustment_damping = 0.15  # More responsive adjustment
+        self.recognizer.dynamic_energy_ratio = 1.5  # More sensitive to quieter sounds
+        self.recognizer.pause_threshold = 0.8  # Longer pause threshold
+        self.recognizer.phrase_threshold = 0.3  # Lower phrase threshold
+        self.recognizer.non_speaking_duration = 0.5  # Shorter non-speaking duration
         
         # Initialize Chrome with debugging options
         print("Connecting to Chrome...")
@@ -120,15 +125,16 @@ class VoiceAssistant:
 
         # Search tweets command
         elif 'search tweets' in command:
-            # Extract search query after "search tweets for"
-            search_match = re.search(r'search tweets (?:for )?([^from]+)(?:from (.+?))?(?:to (.+))?$', command)
-            if search_match:
-                query = search_match.group(1).strip()
-                from_date = search_match.group(2).strip() if search_match.group(2) else None
-                to_date = search_match.group(3).strip() if search_match.group(3) else None
-                self.handle_search_tweets(query, from_date, to_date)
+            # Extract everything after "search tweets" or "search tweets for"
+            search_text = command.replace('search tweets for', '').replace('search tweets', '').strip()
+            if search_text:
+                self.handle_search_tweets(search_text)
             else:
                 self.speak("Please specify what to search for")
+
+        # Add new AI analysis command
+        if 'show ai analysis' in command:
+            self.handle_ai_analysis()
 
     def handle_check_agent(self):
         """Handle the check agent command"""
@@ -393,70 +399,124 @@ class VoiceAssistant:
         except Exception as e:
             print(f"Error showing top agents: {e}")
 
-    def handle_search_tweets(self, query, from_date=None, to_date=None):
+    def handle_search_tweets(self, query):
         """Handle searching tweets command"""
+        if not query:
+            self.speak("Please specify what to search for")
+            return
+        
+        # Remove 'cookie' from the query if present
+        query = query.replace('cookie', '').strip()
         self.speak(f"Searching tweets for {query}")
         
         try:
-            # Format the API URL with query parameters
-            search_url = f"{self.api_url}/search/{query}"
-            if from_date:
-                search_url += f"?from={from_date}"
-            if to_date:
-                search_url += f"&to={to_date}" if from_date else f"?to={to_date}"
+            # Navigate to search page with query parameter using proper URL encoding
+            encoded_query = requests.utils.quote(query)
+            search_url = f"{self.frontend_url}/search-tweets?q={encoded_query}"
+            webbrowser.open(search_url)
+            time.sleep(2)
             
-            # Make API request
-            response = requests.get(search_url, timeout=5)
+            # Switch to the newly opened tab
+            self.driver.switch_to.window(self.driver.window_handles[-1])
             
-            if response.status_code == 200 and response.json().get('ok'):
-                tweets = response.json()['ok']
+            try:
+                # Wait for results
+                results = WebDriverWait(self.driver, 5).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, '.MuiCard-root'))
+                )
+                tweet_count = len(self.driver.find_elements(By.CSS_SELECTOR, '.MuiCard-root'))
+                self.speak(f"Found {tweet_count} tweets matching your search")
                 
-                # Open frontend with search results
-                webbrowser.open(f"{self.frontend_url}/search?q={query}")
-                time.sleep(2)
+            except Exception as e:
+                try:
+                    error = WebDriverWait(self.driver, 2).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, '.MuiAlert-root'))
+                    )
+                    self.speak("No tweets found matching your search")
+                except:
+                    self.speak("Still loading results...")
                 
-                # Switch to the newly opened tab
-                self.driver.switch_to.window(self.driver.window_handles[-1])
-                
-                # Read out top 3 tweets
-                self.speak(f"Found {len(tweets)} tweets. Here are the top results:")
-                for i, tweet in enumerate(tweets[:3], 1):
-                    self.speak(f"Tweet {i} by {tweet['authorUsername']}: {tweet['text']}")
-                
-            else:
-                self.speak("Sorry, I couldn't find any tweets matching your search")
-            
         except Exception as e:
             print(f"Error searching tweets: {e}")
-            self.speak("Sorry, there was an error searching tweets")
+            self.speak("Sorry, there was an error while searching tweets")
+
+    def handle_ai_analysis(self):
+        """Handle the show AI analysis command"""
+        try:
+            # Find and click AI analysis button
+            ai_button = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, '[data-testid="show-ai-analysis"]'))
+            )
+            ai_button.click()
+            self.speak("Showing AI analysis")
+        except Exception as e:
+            print(f"Error showing AI analysis: {e}")
+            self.speak("Sorry, I couldn't show the AI analysis")
 
     def listen(self):
         """Listen for voice commands"""
         with sr.Microphone() as source:
             print("\nListening for commands...")
-            self.recognizer.adjust_for_ambient_noise(source)
+            
+            # Adjust for ambient noise more frequently
+            try:
+                self.recognizer.adjust_for_ambient_noise(source, duration=1)
+            except Exception as e:
+                print(f"Error adjusting for noise: {e}")
             
             while True:
                 try:
-                    audio = self.recognizer.listen(source)
-                    text = self.recognizer.recognize_google(audio)
-                    print(f"\nYou said: {text}")
+                    print("Listening...")
+                    audio = self.recognizer.listen(source, 
+                        timeout=10,  # 10 second timeout
+                        phrase_time_limit=5  # 5 second phrase limit
+                    )
                     
-                    # Check if command starts with "cookie"
-                    if 'cookie' in text.lower():
-                        self.process_command(text)
-                    else:
-                        print("Command must start with 'cookie'")
+                    try:
+                        text = self.recognizer.recognize_google(audio, 
+                            show_all=False,  # Only return most likely result
+                            with_confidence=True  # Include confidence scores
+                        )
                         
-                except sr.UnknownValueError:
-                    pass
-                except sr.RequestError as e:
-                    print(f"Could not request results; {e}")
+                        if isinstance(text, tuple):
+                            text, confidence = text
+                        
+                        print(f"\nYou said: {text} (Confidence: {confidence:.2f})")
+                        
+                        # Check if command starts with "cookie" (case insensitive)
+                        if 'cookie' in text.lower():
+                            self.process_command(text)
+                        else:
+                            print("Hint: Start with 'cookie' to give commands")
+                            # Rotate through friendly reminders
+                            reminders = [
+                                "Just add 'cookie' before your command and I'll help you out!",
+                                "Start with 'cookie' and I'll be happy to assist.",
+                                "Remember to say 'cookie' first - then I'm all ears!",
+                                "Add 'cookie' to the start and let's try that again.",
+                                "Quick tip: begin with 'cookie' to activate me."
+                            ]
+                            self.speak(random.choice(reminders))
+                            
+                    except sr.UnknownValueError:
+                        print("Could not understand audio")
+                    except sr.RequestError as e:
+                        print(f"Could not request results; {e}")
+                        
+                except sr.WaitTimeoutError:
+                    continue
                 except KeyboardInterrupt:
                     print("\nStopping voice assistant...")
                     break
                 except Exception as e:
                     print(f"Error: {e}")
+                    continue
+                
+                # Adjust for ambient noise periodically
+                try:
+                    self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
+                except:
+                    pass
 
 def main():
     try:

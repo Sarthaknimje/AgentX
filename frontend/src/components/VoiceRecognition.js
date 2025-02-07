@@ -50,6 +50,15 @@ const VoiceRecognition = ({
             const priceMatch = command.match(/alert (?:for|at) (\d+(?:\.\d+)?)/);
             if (priceMatch) handleSetAlert(parseFloat(priceMatch[1]));
           }
+          else if (command.includes('analyze this') || command.includes('show analysis')) {
+            const analysisButton = document.querySelector('[data-testid="show-ai-analysis"]');
+            if (analysisButton) {
+              analysisButton.click();
+              speakResponse('Showing AI analysis');
+            } else {
+              speakResponse('Please select an agent first');
+            }
+          }
         }
       };
 
