@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Box,
   Paper,
@@ -28,8 +28,6 @@ import {
   MicOff,
   AutoGraph
 } from '@mui/icons-material';
-import AIAnalysis from './AIAnalysis';
-import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 
 const globalStyles = {
   '@keyframes fadeIn': {
@@ -100,8 +98,6 @@ const StatCard = ({ title, value, delta, prefix = '' }) => (
 );
 
 const AgentDetails = ({ agent }) => {
-  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
-
   return (
     <Box sx={{ 
       width: '100%',
@@ -109,13 +105,6 @@ const AgentDetails = ({ agent }) => {
       background: 'linear-gradient(135deg, #000C24 0%, #001433 100%)',
       p: 3,
     }}>
-      {/* AI Analysis - Show at top */}
-      <AIAnalysis 
-        data={agent} 
-        type="agent"
-        visible={true}
-      />
-
       {/* Agent Name Header */}
       <Paper 
         sx={{ 
@@ -287,84 +276,24 @@ const AgentDetails = ({ agent }) => {
                 fontFamily: 'monospace',
                 fontSize: '0.875rem'
               }}>
-                {contract.contractAddress}
+                {contract.address}
               </Typography>
+              <IconButton 
+                size="small"
+                onClick={() => navigator.clipboard.writeText(contract.address)}
+                sx={{ 
+                  color: '#89CFF0',
+                  '&:hover': {
+                    color: '#4facfe'
+                  }
+                }}
+              >
+                <ContentCopy fontSize="small" />
+              </IconButton>
             </Box>
           ))}
         </Stack>
       </Paper>
-
-      <Typography variant="h6" sx={{
-        color: '#fff',
-        fontSize: '1.1rem',
-        fontWeight: 500,
-        mb: 2,
-        ml: 1
-      }}>
-        Top Tweets
-      </Typography>
-
-      <Grid container spacing={2.5}>
-        {agent.topTweets.map((tweet, index) => (
-          <Grid item xs={12} sm={6} md={4} key={index}>
-            <Paper sx={{ 
-              p: 3, 
-              height: '100%',
-              background: 'linear-gradient(135deg, #001B3D 0%, #0A4D94 100%)',
-              borderRadius: 2,
-              border: '1px solid rgba(255,255,255,0.08)',
-              '&:hover': {
-                transform: 'translateY(-4px)',
-                background: 'linear-gradient(135deg, #002152 0%, #0A5BAE 100%)',
-              }
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar 
-                  src={tweet.tweetAuthorProfileImageUrl} 
-                  sx={{ 
-                    width: 32, 
-                    height: 32, 
-                    mr: 1,
-                    border: '2px solid rgba(255,255,255,0.2)'
-                  }}
-                />
-                <Typography variant="subtitle2" sx={{ color: '#fff' }}>
-                  {tweet.tweetAuthorDisplayName}
-                </Typography>
-                <IconButton 
-                  size="small" 
-                  sx={{ 
-                    ml: 'auto',
-                    color: '#1DA1F2',
-                    '&:hover': {
-                      background: 'rgba(29,161,242,0.1)'
-                    }
-                  }}
-                  href={tweet.tweetUrl}
-                  target="_blank"
-                >
-                  <Twitter fontSize="small" />
-                </IconButton>
-              </Box>
-              <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
-              <Stack spacing={1}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Assessment sx={{ mr: 1, fontSize: 20, color: '#89CFF0' }} />
-                  <Typography variant="body2" sx={{ color: '#fff' }}>
-                    Impressions: {tweet.impressionsCount.toLocaleString()}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <People sx={{ mr: 1, fontSize: 20, color: '#89CFF0' }} />
-                  <Typography variant="body2" sx={{ color: '#fff' }}>
-                    Smart Engagement: {tweet.smartEngagementPoints}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
     </Box>
   );
 };

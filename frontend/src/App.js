@@ -32,7 +32,6 @@ import {
 import { Search as SearchIcon, Mic as MicIcon, Share as ShareIcon, Download as DownloadIcon } from '@mui/icons-material';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { TrendingUp as TrendingUpIcon } from '@mui/icons-material';
 import { CircularProgress } from '@mui/material';
 import ComparisonTable from './components/ComparisonTable.js';
 import { calculateRSI, calculateMACD } from './utils/technicalAnalysis';
@@ -41,7 +40,7 @@ import VoiceRecognition from './components/VoiceRecognition';
 import TopAgents from './components/TopAgents';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import TweetSearch from './components/TweetSearch';
-import AIAnalysis from './components/AIAnalysis';
+
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
 
@@ -59,7 +58,7 @@ function App() {
   const [showTrends, setShowTrends] = useState(false);
   const [searchMode, setSearchMode] = useState('username');
   const [contractAddress, setContractAddress] = useState('');
-  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
+ 
 
   // Initialize speech recognition
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -183,8 +182,6 @@ function App() {
       if (response.data.ok) {
         setAgentData(response.data.ok);
         speakResponse(`Found data for ${response.data.ok.agentName}. Current mindshare is ${response.data.ok.mindshare.toFixed(2)}`);
-        // Auto show AI analysis
-        setShowAIAnalysis(true);
       } else {
         setError('No data found');
       }
@@ -542,10 +539,6 @@ function App() {
                       <AgentDetails agent={compareData} />
                     </Grid>
                   </Grid>
-                  <AIAnalysis 
-                    data={{ agent1: agentData, agent2: compareData }} 
-                    type="comparison" 
-                  />
                 </>
               )}
 

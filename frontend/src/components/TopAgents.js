@@ -32,7 +32,6 @@ import {
 } from '@mui/icons-material';
 import { keyframes } from '@mui/system';
 import axios from 'axios';
-import AIAnalysis from './AIAnalysis';
 
 // Animation keyframes
 const gradientAnimation = keyframes`
@@ -64,8 +63,6 @@ const TopAgents = () => {
     key: 'mindshare',
     direction: 'desc'
   });
-  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
-  const [autoAnalysis, setAutoAnalysis] = useState(true);
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
 
@@ -96,12 +93,6 @@ const TopAgents = () => {
   useEffect(() => {
     fetchAgents();
   }, [page, pageSize, interval]);
-
-  useEffect(() => {
-    if (agents.length > 0 && autoAnalysis) {
-      setShowAIAnalysis(true);
-    }
-  }, [agents]);
 
   const handleIntervalChange = (event) => {
     setInterval(event.target.value);
@@ -176,15 +167,6 @@ const TopAgents = () => {
         >
           Top Agents by Mindshare
         </Typography>
-
-        {/* Show AI Analysis at the top */}
-        {agents.length > 0 && (
-          <AIAnalysis 
-            data={sortedAgents} 
-            type="topAgents" 
-            visible={showAIAnalysis}
-          />
-        )}
 
         <Box mb={4} sx={{ display: 'flex', justifyContent: 'center' }}>
           <FormControl size="small" sx={{ minWidth: 200 }}>
@@ -323,16 +305,6 @@ const TopAgents = () => {
             }}
           />
         </Box>
-
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AutoGraphIcon />}
-          onClick={() => setShowAIAnalysis(!showAIAnalysis)}
-          sx={{ mt: 2 }}
-        >
-          {showAIAnalysis ? 'Hide Market Analysis' : 'Show Market Analysis'}
-        </Button>
       </Paper>
     </Box>
   );
