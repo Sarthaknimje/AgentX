@@ -3,6 +3,8 @@ import { IconButton, Tooltip } from '@mui/material';
 import { Mic, MicOff } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import SwapService from '../services/SwapService';
+import { formatError } from '../utils/swapUtils';
 
 const VoiceRecognition = ({ 
   agentData, 
@@ -79,45 +81,7 @@ const VoiceRecognition = ({
             }
           }
           else if (command.includes('swap token') || command.includes('swap this token') || command.includes('buy token')) {
-            const amountMatch = command.match(/(\d+(?:\.\d+)?)\s*sei/);
-            const amount = amountMatch ? parseFloat(amountMatch[1]) : 1.0;
-            
-            speakResponse(`Opening DragonSwap to swap ${amount} SEI`);
-            
-            // Wrap navigation in try-catch and use a more reliable method
-            try {
-                // Create and dispatch a custom event
-                const navigationEvent = new CustomEvent('navigateToSwap', {
-                    detail: {
-                        url: 'https://staging.dragonswap.app/swap?inputCurrency=SEI&outputCurrency='
-                    }
-                });
-                window.dispatchEvent(navigationEvent);
-                
-                // Fallback navigation methods in order of preference
-                const navigateToSwap = () => {
-                    try {
-                        // Method 1: Regular navigation
-                        window.location.href = 'https://staging.dragonswap.app/swap?inputCurrency=SEI&outputCurrency=';
-                    } catch (e) {
-                        try {
-                            // Method 2: Open in new tab
-                            const newWindow = window.open('https://staging.dragonswap.app/swap?inputCurrency=SEI&outputCurrency=', '_blank');
-                            if (newWindow) newWindow.focus();
-                        } catch (e2) {
-                            // Method 3: Force navigation
-                            document.location.assign('https://staging.dragonswap.app/swap?inputCurrency=SEI&outputCurrency=');
-                        }
-                    }
-                };
-
-                // Delay navigation slightly to allow speech to complete
-                setTimeout(navigateToSwap, 1000);
-                
-            } catch (error) {
-                console.error('Navigation error:', error);
-                // Don't show error message to user, just log it
-            }
+            handleSwapCommand(command);
           }
         }
       };
@@ -203,6 +167,45 @@ const VoiceRecognition = ({
       recognition?.start();
     }
     setIsListening(!isListening);
+  };
+
+  const handleSwapCommand = async (command) => {
+    try {
+      const networkMatch = command.match(/on (arbitrum|avalanche|mode)/i);
+      const amountMatch = command.match(/(\d+(?:\.\d+)?)\s*(eth|avax|sei)/i);
+      const slippageMatch = command.match(/slippage (\d+(?:\.\d+)?)/i);
+      
+      const network = networkMatch ? networkMatch[1].toLowerCase() : 'sei';
+      const amount = amountMatch ? parseFloat(amountMatch[1]) : 1.0;
+      const slippage = slippageMatch ? parseFloat(slippageMatch[1]) : null;
+      
+      // Switch network if needed
+      await switchNetwork(network);
+      
+      const swapService = new SwapService(network);
+      
+      speakResponse(`Preparing to swap ${amount} on ${network}`);
+      
+      const tx = await swapService.swapExactTokensForTokens(
+        tokenAddress,
+        amount,
+        wallet,
+        slippage
+      );
+      
+      speakResponse(
+        `Swap successful on ${network}. ` +
+        `Received ${tx.amountOut} tokens at ${tx.effectivePrice} per token. ` +
+        `Transaction hash: ${tx.hash}`
+      );
+      
+      // Open explorer
+      window.open(tx.explorer);
+      
+    } catch (error) {
+      console.error('Swap error:', error);
+      speakResponse(`Sorry, there was an error: ${formatError(error)}`);
+    }
   };
 
   return (
